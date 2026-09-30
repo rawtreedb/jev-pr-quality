@@ -26,13 +26,9 @@ const PATHS = [
   "M-693.871 2119.67C-430.636 962.277 -310.071 671.193 -252.009 679.87C-173.648 691.584 -240.805 1244.56 -71.2696 1297.54C141.597 1364.06 404.573 541.337 881.045 510.322C1130.24 494.097 1355.52 699.783 1528.01 919.395",
 ];
 
-const COLOR_DURATION = 9;
-const SHIFT_DURATION = 7;
-const MAX_DIST = Math.floor((PATHS.length - 1) / 2);
-
 export function AnimatedLines() {
   return (
-    <div aria-hidden className="brand-lines pointer-events-none absolute inset-0 z-0 overflow-hidden will-change-transform">
+    <div aria-hidden className="brand-lines pointer-events-none absolute inset-0 z-0 overflow-hidden">
       <svg
         className="absolute inset-0 size-full"
         width="1440"
@@ -51,17 +47,9 @@ export function AnimatedLines() {
         </defs>
         <g clipPath="url(#brand-lines-clip-frame)">
         <g clipPath="url(#brand-lines-clip)">
-          {PATHS.map((d, i) => {
-            const progress = Math.min(i, PATHS.length - 1 - i) / MAX_DIST - 1;
-            return (
-              <path
-                key={i}
-                d={d}
-                strokeMiterlimit={10}
-                style={{ animationDelay: `${(COLOR_DURATION / 2) * progress}s, ${(SHIFT_DURATION / 2) * progress}s` }}
-              />
-            );
-          })}
+          {PATHS.map((d, i) => (
+            <path key={i} d={d} strokeMiterlimit={10} />
+          ))}
         </g>
         </g>
       </svg>

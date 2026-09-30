@@ -230,7 +230,7 @@ function DataTable({ query, data }: { query: DashboardQuery; data: Record<string
                   <td key={column.key} className={`px-4 py-2.5 text-right font-mono text-code whitespace-nowrap ${edge}`}>
                     {column.format === "score" ? (
                       <span className="flex items-center justify-end gap-4">
-                        <span className="h-1.5 w-[200px] min-w-24 overflow-hidden rounded-[4px] bg-surface-01">
+                        <span className="h-1.5 w-[200px] min-w-24 overflow-hidden rounded-[4px] bg-surface-02">
                           <span
                             className="table-bar-grow block h-full bg-primary"
                             style={{ width: `${Math.min(100, Number(row[column.key]) * 10)}%` }}
