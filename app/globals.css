@@ -240,7 +240,7 @@
   padding: 0.75rem;
 }
 
-/* Login background lines: animation copied from illustration-lab/cards/index.backup-onda-suave.html */
+/* Login background lines */
 .brand-lines svg {
   opacity: 0.6;
 }
@@ -248,25 +248,6 @@
 .brand-lines path {
   stroke: #cccccc;
   stroke-width: 0.75;
-  animation-name: wave-color, wave-shift;
-  animation-duration: 9s, 7s;
-  animation-timing-function: ease-in-out, ease-in-out;
-  animation-iteration-count: infinite, infinite;
-  transform-box: fill-box;
-  transform-origin: center;
-}
-
-@keyframes wave-color {
-  0%   { stroke: #cccccc; filter: drop-shadow(0 0 0px rgba(0, 25, 255, 0)); }
-  42%  { stroke: #cccccc; filter: drop-shadow(0 0 0px rgba(0, 25, 255, 0)); }
-  50%  { stroke: #0019ff; filter: drop-shadow(0 0 4px rgba(0, 25, 255, 0.5)); }
-  58%  { stroke: #cccccc; filter: drop-shadow(0 0 0px rgba(0, 25, 255, 0)); }
-  100% { stroke: #cccccc; filter: drop-shadow(0 0 0px rgba(0, 25, 255, 0)); }
-}
-
-@keyframes wave-shift {
-  0%, 100% { transform: translateY(0px) translateX(0px); }
-  50%      { transform: translateY(18px) translateX(-8px); }
 }
 
 /* Table score bars grow like the chart bars (Recharts Bar default: 400ms ease) */

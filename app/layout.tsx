@@ -23,12 +23,6 @@ export const metadata: Metadata = {
   title: { default: SITE_NAME, template: `%s | ${SITE_NAME}` },
   description: SITE_DESCRIPTION,
   openGraph: { type: "website", siteName: SITE_NAME },
-  icons: {
-    icon: [
-      { url: "/favicon.ico" },
-      { url: "/rawtree-logo.svg", type: "image/svg+xml" },
-    ],
-  },
 };
 
 export default function RootLayout({
