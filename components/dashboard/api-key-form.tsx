@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, ExternalLink } from "lucide-react";
 import { AnimatedLines } from "@/components/dashboard/animated-lines";
 import { Button } from "@/components/ui/button";
+import { LINKS } from "@/lib/constants";
 import { RAWTREE_API_URL, type RawtreeConfig } from "@/lib/rawtree-api";
 
 export function ApiKeyForm({
@@ -66,10 +67,24 @@ export function ApiKeyForm({
             </p>
           </div>
 
-          <Button type="submit" className="px-4">
-            Load dashboard
-            <ChevronRight data-icon="inline-end" />
-          </Button>
+          <div className="flex w-full flex-wrap items-center justify-between gap-4">
+            <p className="text-body text-muted-foreground">
+              No RawTree account?{" "}
+              <a
+                href={LINKS.requestAccess}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Request access
+                <ExternalLink className="size-3" aria-hidden />
+              </a>
+            </p>
+            <Button type="submit" className="ml-auto px-4">
+              Load dashboard
+              <ChevronRight data-icon="inline-end" />
+            </Button>
+          </div>
         </form>
 
         <div className="relative overflow-hidden rounded-panel border border-brand-light bg-card p-6">
