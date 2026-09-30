@@ -192,7 +192,7 @@ export function DashboardGrid() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         {LAYOUT.map((id) => dashboardQueries.find((query) => query.id === id)!).map((query) => (
-          <div key={query.id} className={FULL_WIDTH.has(query.id) ? "lg:col-span-2" : undefined}>
+          <div key={query.id} className={`min-w-0 ${FULL_WIDTH.has(query.id) ? "lg:col-span-2" : ""}`}>
             <ChartPanel
               query={query}
               result={results[query.id] ?? null}

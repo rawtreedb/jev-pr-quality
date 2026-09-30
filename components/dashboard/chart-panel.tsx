@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Code2, BarChart3 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ArrowDown, ArrowUp, ArrowUpDown, BarChart3, Code2 } from "lucide-react";
 import {
   AreaChart,
   Area,
@@ -135,6 +135,7 @@ function formatCell(value: unknown, format: TableColumn["format"]) {
 
 const NUMBER_COLUMN = 140;
 const SCORE_COLUMN = 200 + 16 + 40 + 32;
+const EMPTY_COLUMNS: TableColumn[] = [];
 
 function columnWidth(column: TableColumn, index: number, count: number): number | undefined {
   if (index === 0) return undefined;
@@ -142,10 +143,46 @@ function columnWidth(column: TableColumn, index: number, count: number): number 
   return index === count - 1 ? width + 8 : width;
 }
 
+type SortDirection = "asc" | "desc";
+
+function defaultSortDirection(column: TableColumn): SortDirection {
+  return !column.format || column.format === "text" ? "asc" : "desc";
+}
+
+function compareValues(left: unknown, right: unknown, column: TableColumn): number {
+  if (!column.format || column.format === "text") {
+    return String(left ?? "").localeCompare(String(right ?? ""), undefined, {
+      sensitivity: "base",
+    });
+  }
+  return Number(left) - Number(right);
+}
+
 function DataTable({ query, data }: { query: DashboardQuery; data: Record<string, unknown>[] }) {
-  const columns = query.columns ?? [];
+  const columns = query.columns ?? EMPTY_COLUMNS;
+  const [sort, setSort] = useState<{ key: string; direction: SortDirection } | null>(null);
+  const sortedData = useMemo(() => {
+    if (!sort) return data;
+    const column = columns.find(({ key }) => key === sort.key);
+    if (!column) return data;
+    const factor = sort.direction === "asc" ? 1 : -1;
+    return data
+      .map((row, index) => ({ row, index }))
+      .sort((left, right) => {
+        const compared = compareValues(left.row[column.key], right.row[column.key], column);
+        return compared === 0 ? left.index - right.index : compared * factor;
+      })
+      .map(({ row }) => row);
+  }, [columns, data, sort]);
+
+  function changeSort(column: TableColumn) {
+    setSort((current) => current?.key === column.key
+      ? { key: column.key, direction: current.direction === "asc" ? "desc" : "asc" }
+      : { key: column.key, direction: defaultSortDirection(column) });
+  }
+
   return (
-    <div className="-mx-6 -mb-5 overflow-x-auto border-t">
+    <div className="-mx-6 -mb-5 w-[calc(100%+3rem)] min-w-0 overflow-x-auto border-t">
       <table className="w-full min-w-[720px] table-fixed text-body">
         <colgroup>
           {columns.map((column, i) => (
@@ -157,15 +194,31 @@ function DataTable({ query, data }: { query: DashboardQuery; data: Record<string
             {columns.map((column, i) => (
               <th
                 key={column.key}
+                aria-sort={sort?.key === column.key
+                  ? (sort.direction === "asc" ? "ascending" : "descending")
+                  : "none"}
                 className={`px-4 whitespace-nowrap ${i === 0 ? "pl-6 text-left font-medium" : "text-right font-semibold"} ${i === columns.length - 1 ? "pr-6" : ""}`}
               >
-                {column.label}
+                <button
+                  type="button"
+                  onClick={() => changeSort(column)}
+                  className={`inline-flex w-full items-center gap-1.5 hover:text-primary ${i === 0 ? "justify-start" : "justify-end"}`}
+                >
+                  {column.label}
+                  {sort?.key === column.key ? (
+                    sort.direction === "asc"
+                      ? <ArrowUp className="size-3.5" aria-hidden />
+                      : <ArrowDown className="size-3.5" aria-hidden />
+                  ) : (
+                    <ArrowUpDown className="size-3.5 text-muted-foreground" aria-hidden />
+                  )}
+                </button>
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {data.map((row, rowIndex) => (
+          {sortedData.map((row, rowIndex) => (
             <tr key={rowIndex} className="h-11 border-b last:border-b-0">
               {columns.map((column, i) => {
                 const text = formatCell(row[column.key], column.format);
