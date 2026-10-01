@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronRight } from "lucide-react";
+import Image from "next/image";
+import { ChevronRight, ExternalLink } from "lucide-react";
 import { AnimatedLines } from "@/components/dashboard/animated-lines";
 import { Button } from "@/components/ui/button";
+import { LINKS } from "@/lib/constants";
 import { RAWTREE_API_URL, type RawtreeConfig } from "@/lib/rawtree-api";
 
 export function ApiKeyForm({
@@ -20,7 +22,7 @@ export function ApiKeyForm({
   }
 
   return (
-    <section className="relative isolate flex flex-1 items-center justify-center overflow-hidden bg-canvas px-4 py-12">
+    <section className="relative isolate flex flex-1 flex-col items-center justify-center overflow-hidden bg-canvas px-4 py-12">
       <AnimatedLines />
 
       <div className="relative z-10 flex w-full max-w-[500px] flex-col gap-4">
@@ -66,10 +68,24 @@ export function ApiKeyForm({
             </p>
           </div>
 
-          <Button type="submit" className="px-4">
-            Load dashboard
-            <ChevronRight data-icon="inline-end" />
-          </Button>
+          <div className="flex w-full flex-wrap items-center justify-between gap-4">
+            <p className="text-body text-muted-foreground">
+              No RawTree account?{" "}
+              <a
+                href={LINKS.requestAccess}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Request access
+                <ExternalLink className="size-3" aria-hidden />
+              </a>
+            </p>
+            <Button type="submit" className="ml-auto px-4">
+              Load dashboard
+              <ChevronRight data-icon="inline-end" />
+            </Button>
+          </div>
         </form>
 
         <div className="relative overflow-hidden rounded-panel border border-brand-light bg-card p-6">
@@ -91,6 +107,23 @@ export function ApiKeyForm({
           </div>
         </div>
       </div>
+
+      <figure className="relative z-10 mt-12 w-full max-w-[1120px] rounded-panel border bg-card p-3 sm:p-6">
+        <figcaption className="mb-4 flex flex-col gap-1 px-2 pt-2 text-center sm:mb-6 sm:pt-0">
+          <span className="text-display-xs">What you&apos;ll see</span>
+          <span className="text-body text-muted-foreground">
+            Contributor rankings, repository quality, and score trends. Preview uses sample data.
+          </span>
+        </figcaption>
+        <Image
+          src="/dashboard-preview.webp"
+          alt="Dashboard preview with review totals, a contributor quality leaderboard, and a quality-over-time chart"
+          width={1600}
+          height={1451}
+          sizes="(min-width: 1152px) 1072px, calc(100vw - 56px)"
+          className="h-auto w-full rounded-card border"
+        />
+      </figure>
     </section>
   );
 }
