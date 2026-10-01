@@ -35,10 +35,10 @@ the repositories you want to review.
 ### 3. See it live
 
 Create a separate RawTree **read-only** key with the **same default database** as
-the write key. Open the [live dashboard](https://jev-pr-quality.vercel.app) and
+the write key. Open the [live dashboard](https://jev-pr-quality.rawtree.tech) and
 paste it in. The key stays in browser memory and is sent directly to RawTree.
 
-[![Jev PR Quality dashboard showing pull request quality across repositories](public/dashboard-preview.webp)](https://jev-pr-quality.vercel.app)
+[![Jev PR Quality dashboard showing pull request quality across repositories](public/dashboard-preview.webp)](https://jev-pr-quality.rawtree.tech)
 
 That is it. Each new PR gets a Jev review comment and quality check, while its
 structured score is appended to RawTree and appears in the dashboard.
@@ -125,8 +125,9 @@ unrelated records are excluded.
 ### Vercel
 
 Import this repository as a Next.js project with the repository root as the root
-directory. The committed build command and Node.js version are sufficient; no
-Vercel environment variables are required. Do not add either API key to Vercel:
+directory. Set `NEXT_PUBLIC_SITE_URL` to your public URL so shared links use
+your domain in their preview image and canonical metadata. Do not add either API
+key to Vercel:
 the write-only key belongs in GitHub Actions, and viewers enter read-only keys at
 runtime.
 

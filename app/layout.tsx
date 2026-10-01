@@ -18,11 +18,27 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const OG_IMAGE_ALT =
+  "RawTree Open Graph image with blue background and the headline The cloud database for raw analytical data.";
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: { default: SITE_NAME, template: `%s | ${SITE_NAME}` },
   description: SITE_DESCRIPTION,
-  openGraph: { type: "website", siteName: SITE_NAME },
+  openGraph: {
+    type: "website",
+    url: "/",
+    siteName: SITE_NAME,
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    images: [{ url: "/opengraph-image.png", width: 1024, height: 537, alt: OG_IMAGE_ALT }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    images: [{ url: "/opengraph-image.png", alt: OG_IMAGE_ALT }],
+  },
 };
 
 export default function RootLayout({
