@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { ChevronRight, ExternalLink } from "lucide-react";
 import { AnimatedLines } from "@/components/dashboard/animated-lines";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,7 @@ export function ApiKeyForm({
   }
 
   return (
-    <section className="relative isolate flex flex-1 items-center justify-center overflow-hidden bg-canvas px-4 py-12">
+    <section className="relative isolate flex flex-1 flex-col items-center justify-center overflow-hidden bg-canvas px-4 py-12">
       <AnimatedLines />
 
       <div className="relative z-10 flex w-full max-w-[500px] flex-col gap-4">
@@ -106,6 +107,23 @@ export function ApiKeyForm({
           </div>
         </div>
       </div>
+
+      <figure className="relative z-10 mt-12 w-full max-w-[1120px] rounded-panel border bg-card p-3 sm:p-6">
+        <figcaption className="mb-4 flex flex-col gap-1 px-2 pt-2 text-center sm:mb-6 sm:pt-0">
+          <span className="text-display-xs">What you&apos;ll see</span>
+          <span className="text-body text-muted-foreground">
+            Contributor rankings, repository quality, and score trends. Preview uses sample data.
+          </span>
+        </figcaption>
+        <Image
+          src="/dashboard-preview.webp"
+          alt="Dashboard preview with review totals, a contributor quality leaderboard, and a quality-over-time chart"
+          width={1600}
+          height={1451}
+          sizes="(min-width: 1152px) 1072px, calc(100vw - 56px)"
+          className="h-auto w-full rounded-card border"
+        />
+      </figure>
     </section>
   );
 }

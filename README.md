@@ -38,7 +38,7 @@ Create a separate RawTree **read-only** key with the **same default database** a
 the write key. Open the [live dashboard](https://jev-pr-quality.vercel.app) and
 paste it in. The key stays in browser memory and is sent directly to RawTree.
 
-[![Jev PR Quality dashboard showing pull request quality across repositories](docs/dashboard.png)](https://jev-pr-quality.vercel.app)
+[![Jev PR Quality dashboard showing pull request quality across repositories](public/dashboard-preview.webp)](https://jev-pr-quality.vercel.app)
 
 That is it. Each new PR gets a Jev review comment and quality check, while its
 structured score is appended to RawTree and appears in the dashboard.
