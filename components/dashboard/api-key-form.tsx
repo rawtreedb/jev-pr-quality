@@ -2,11 +2,34 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { ChevronRight, ExternalLink } from "lucide-react";
+import { BarChart3, ChevronRight, Database, ExternalLink, GitPullRequest, ShieldCheck, Sparkles } from "lucide-react";
 import { AnimatedLines } from "@/components/dashboard/animated-lines";
 import { Button } from "@/components/ui/button";
 import { LINKS } from "@/lib/constants";
 import { RAWTREE_API_URL, type RawtreeConfig } from "@/lib/rawtree-api";
+
+const HOW_IT_WORKS = [
+  {
+    icon: GitPullRequest,
+    title: "Open a PR",
+    body: "The GitHub Action sends the complete text diff, PR intent, and repository rules to Jev.",
+  },
+  {
+    icon: Sparkles,
+    title: "Jev scores it",
+    body: "19 quality dimensions use typed answers. Every applicable one must score 7 or more.",
+  },
+  {
+    icon: Database,
+    title: "RawTree logs it",
+    body: "Every run is appended to RawTree. Queries count only the latest review for each PR.",
+  },
+  {
+    icon: BarChart3,
+    title: "Compare quality",
+    body: "See contributor rankings, repository quality, and trends over time.",
+  },
+];
 
 export function ApiKeyForm({
   onConnect,
@@ -124,6 +147,44 @@ export function ApiKeyForm({
           className="h-auto w-full rounded-card border"
         />
       </figure>
+
+      <section aria-labelledby="how-it-works" className="relative z-10 mt-6 w-full max-w-[1120px] rounded-panel border bg-card p-6">
+        <div className="mb-6 flex flex-col gap-1 text-center">
+          <h2 id="how-it-works" className="text-display-xs">How it works</h2>
+          <p className="text-body text-muted-foreground">From pull request to quality trend, without a dashboard backend.</p>
+        </div>
+        <ol className="grid gap-3 md:grid-cols-4">
+          {HOW_IT_WORKS.map(({ icon: Icon, title, body }, index) => (
+            <li key={title} className="flex flex-col gap-3 rounded-card border bg-surface-01 p-4">
+              <div className="flex items-center justify-between">
+                <span className="flex size-9 items-center justify-center rounded-full bg-brand-light text-primary">
+                  <Icon className="size-4" aria-hidden />
+                </span>
+                <span className="font-mono text-caption text-muted-foreground">0{index + 1}</span>
+              </div>
+              <div className="flex flex-col gap-1">
+                <h3 className="font-semibold">{title}</h3>
+                <p className="text-body text-muted-foreground">{body}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+        <div className="mt-4 flex flex-col gap-3 rounded-card border border-brand-light bg-brand-light/40 px-4 py-3 text-body sm:flex-row sm:items-center sm:justify-between">
+          <p className="flex items-start gap-2">
+            <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+            <span>CI gets a write-only key. Your dashboard key stays in your browser.</span>
+          </p>
+          <a
+            href={`${LINKS.github}#how-it-works`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex shrink-0 items-center gap-1 font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Technical details
+            <ExternalLink className="size-3" aria-hidden />
+          </a>
+        </div>
+      </section>
     </section>
   );
 }
