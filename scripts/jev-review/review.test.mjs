@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { validateDiff, buildQuestions, evaluateResponse, parseThreshold, review, summary } from './review.mjs';
+import { separateBinaryChanges, validateDiff, buildQuestions, evaluateResponse, parseThreshold, review, summary } from './review.mjs';
 
 function response(score = 6) {
   return { answers: Object.fromEntries(Object.entries(buildQuestions()).map(([id, question]) => [id,
@@ -56,11 +56,34 @@ test('fails closed on missing, non-finite, out-of-range, or unknown decisions', 
   assert.throws(() => evaluateResponse(data, 7));
 });
 
-test('rejects empty, binary, and oversized diffs without silently excluding content', () => {
+const binaryDiff = 'diff --git a/app/favicon.ico b/app/favicon.ico\nindex 1..2 100644\nBinary files a/app/favicon.ico and b/app/favicon.ico differ\n';
+
+test('rejects empty, unseparated binary, and oversized diffs', () => {
   assert.doesNotThrow(() => validateDiff(diff));
   assert.throws(() => validateDiff(''));
   assert.throws(() => validateDiff(diff + 'x'.repeat(1_000_000)), /1 MB/);
-  assert.throws(() => validateDiff('diff --git a/a b/a\nGIT binary patch\n'), /binary/);
+  assert.throws(() => validateDiff('diff --git a/a b/a\nGIT binary patch\n'), /Binary/);
+});
+
+test('separates binary files from the reviewable text diff', () => {
+  assert.deepEqual(separateBinaryChanges(diff + binaryDiff), { diff, binaryFiles: ['app/favicon.ico'] });
+  assert.deepEqual(separateBinaryChanges(diff), { diff, binaryFiles: [] });
+  assert.throws(() => separateBinaryChanges(binaryDiff), /only changes binary files/);
+});
+
+test('reviews text changes and reports binary files as unassessed', async () => {
+  const report = await review({
+    diff: binaryDiff + diff, task: '', repositoryContext: '', threshold: 7, apiKey: 'test-placeholder',
+    fetch: async (_url, options) => {
+      const { state } = JSON.parse(options.body);
+      assert.equal(state.diff, diff);
+      assert.match(state.repositoryContext, /not assessed:\n- app\/favicon.ico/);
+      return Response.json(response(6));
+    },
+  });
+  assert.equal(report.passed, true);
+  assert.deepEqual(report.unassessedBinaryFiles, ['app/favicon.ico']);
+  assert.match(summary({ ...report, head: 'a'.repeat(40), base: 'b'.repeat(40) }), /Binary files not assessed/);
 });
 
 test('SDK sends authenticated typed questions to the fixed API and returns gate failure', async () => {

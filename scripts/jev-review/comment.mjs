@@ -28,6 +28,9 @@ export function formatComment({ report, head, runUrl }) {
     `> **${report.passed ? '✅ Passed' : '❌ Changes needed'}** · Minimum score: **${report.threshold}/10** · **${applicable.length - failures.length}/${applicable.length}** applicable dimensions passed.`, '',
     `Reviewed commit: \`${head.slice(0, 7)}\` · [View run and full JSON report](${runUrl})`, '',
   );
+  if (report.unassessedBinaryFiles?.length) {
+    lines.push(`Binary files not assessed by Jev: ${report.unassessedBinaryFiles.map((file) => `\`${file}\``).join(', ')}`, '');
+  }
   if (report.batches.length > 1) {
     lines.push(`Lowest score per dimension across **${report.batches.length} batches**; confidence and notes correspond to that score.`, '');
   }

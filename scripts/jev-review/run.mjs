@@ -14,7 +14,7 @@ try {
   }
   const threshold = parseThreshold(process.env.JEV_MIN_SCORE ?? '7');
   // Three-dot matches the PR: only changes introduced since the common ancestor.
-  const diff = git('diff', '--no-ext-diff', '--no-textconv', '--binary', '--find-renames', '--unified=20', `${pr.base.sha}...${pr.head.sha}`, '--');
+  const diff = git('diff', '--no-ext-diff', '--no-textconv', '--find-renames', '--unified=20', `${pr.base.sha}...${pr.head.sha}`, '--');
   let repositoryContext = 'No root AGENTS.md was present in the base revision.';
   try {
     repositoryContext = git('show', `${pr.base.sha}:AGENTS.md`);
