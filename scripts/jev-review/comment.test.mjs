@@ -31,6 +31,11 @@ test('displays the lowest score and its own confidence and note across batches',
   assert.equal(body.split('| Security |').length - 1, 1);
 });
 
+test('lists binary files that Jev did not assess', () => {
+  const body = formatComment({ report: { ...report, unassessedBinaryFiles: ['public/logo.png'] }, head, runUrl });
+  assert.match(body, /Binary files not assessed by Jev: `public\/logo.png`/);
+});
+
 test('evaluation errors show an incomplete review instead of a passing result', () => {
   const body = formatComment({ report: null, head, runUrl });
   assert.match(body, /Review could not complete/);

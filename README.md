@@ -144,8 +144,10 @@ front of it before asking users to enter read keys.
 
 The action sends the PR title and body, the complete three-dot Git diff with 20
 lines of context, and root `AGENTS.md` when present. It does not execute PR code
-or upload the full repository. Large or binary diffs fail closed rather than
-producing a partial, misleading review.
+or upload the full repository. Jev reviews the text diff; changed binary files
+are listed as not assessed in the PR comment and report. Large diffs and PRs
+that only change binary files fail closed rather than producing a misleading
+review.
 
 Jev is an advisory review signal that complements tests and human review. Scores
 are model judgments, not proof of correctness. Historical comparisons should use
