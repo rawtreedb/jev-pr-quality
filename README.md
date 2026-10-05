@@ -170,9 +170,11 @@ Vercel deployment, so Docker installations use API-key mode.
 The action sends the PR title and body, the complete three-dot Git diff with 20
 lines of context, and root `AGENTS.md` when present. It does not execute PR code
 or upload the full repository. Jev reviews the text diff; changed binary files
-are listed as not assessed in the PR comment and report. Large diffs and PRs
-that only change binary files fail closed rather than producing a misleading
-review.
+and generated dependency lockfiles (such as `package-lock.json`, `yarn.lock`,
+`pnpm-lock.yaml`, or `Cargo.lock`) are listed as not assessed in the PR comment
+and report. Manifest changes such as `package.json` remain in the reviewed diff.
+Large diffs and PRs that only change binary files or lockfiles fail closed
+rather than producing a misleading review.
 
 Jev is an advisory review signal that complements tests and human review. Scores
 are model judgments, not proof of correctness. Historical comparisons should use

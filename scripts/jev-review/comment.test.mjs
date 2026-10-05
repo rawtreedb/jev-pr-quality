@@ -36,6 +36,11 @@ test('lists binary files that Jev did not assess', () => {
   assert.match(body, /Binary files not assessed by Jev: `public\/logo.png`/);
 });
 
+test('lists lockfiles that Jev did not assess', () => {
+  const body = formatComment({ report: { ...report, unassessedLockfiles: ['package-lock.json'] }, head, runUrl });
+  assert.match(body, /Lockfiles not assessed by Jev: `package-lock.json`/);
+});
+
 test('evaluation errors show an incomplete review instead of a passing result', () => {
   const body = formatComment({ report: null, head, runUrl });
   assert.match(body, /Review could not complete/);

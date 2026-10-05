@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { separateBinaryChanges, validateDiff, buildQuestions, evaluateResponse, parseThreshold, review, summary } from './review.mjs';
+import { separateUnassessedChanges, validateDiff, buildQuestions, evaluateResponse, parseThreshold, review, summary } from './review.mjs';
 
 function response(score = 6) {
   return { answers: Object.fromEntries(Object.entries(buildQuestions()).map(([id, question]) => [id,
@@ -65,25 +65,35 @@ test('rejects empty, unseparated binary, and oversized diffs', () => {
   assert.throws(() => validateDiff('diff --git a/a b/a\nGIT binary patch\n'), /Binary/);
 });
 
-test('separates binary files from the reviewable text diff', () => {
-  assert.deepEqual(separateBinaryChanges(diff + binaryDiff), { diff, binaryFiles: ['app/favicon.ico'] });
-  assert.deepEqual(separateBinaryChanges(diff), { diff, binaryFiles: [] });
-  assert.throws(() => separateBinaryChanges(binaryDiff), /only changes binary files/);
+const lockfileDiff = 'diff --git a/scripts/jev-review/package-lock.json b/scripts/jev-review/package-lock.json\nindex 1..2 100644\n--- a/scripts/jev-review/package-lock.json\n+++ b/scripts/jev-review/package-lock.json\n@@ -1 +1 @@\n-{}\n+{"lockfileVersion": 3}\n';
+
+test('separates binary files and lockfiles from the reviewable text diff', () => {
+  assert.deepEqual(separateUnassessedChanges(diff + binaryDiff), { diff, binaryFiles: ['app/favicon.ico'], lockfiles: [] });
+  assert.deepEqual(separateUnassessedChanges(diff), { diff, binaryFiles: [], lockfiles: [] });
+  assert.deepEqual(
+    separateUnassessedChanges(lockfileDiff + diff),
+    { diff, binaryFiles: [], lockfiles: ['scripts/jev-review/package-lock.json'] },
+  );
+  assert.throws(() => separateUnassessedChanges(binaryDiff), /only changes binary files or lockfiles/);
+  assert.throws(() => separateUnassessedChanges(lockfileDiff), /only changes binary files or lockfiles/);
 });
 
-test('reviews text changes and reports binary files as unassessed', async () => {
+test('reviews text changes and reports binary files and lockfiles as unassessed', async () => {
   const report = await review({
-    diff: binaryDiff + diff, task: '', repositoryContext: '', threshold: 7, apiKey: 'test-placeholder',
+    diff: binaryDiff + lockfileDiff + diff, task: '', repositoryContext: '', threshold: 7, apiKey: 'test-placeholder',
     fetch: async (_url, options) => {
       const { state } = JSON.parse(options.body);
       assert.equal(state.diff, diff);
-      assert.match(state.repositoryContext, /not assessed:\n- app\/favicon.ico/);
+      assert.match(state.repositoryContext, /not assessed:\n- app\/favicon.ico\n- scripts\/jev-review\/package-lock.json/);
       return Response.json(response(6));
     },
   });
   assert.equal(report.passed, true);
   assert.deepEqual(report.unassessedBinaryFiles, ['app/favicon.ico']);
-  assert.match(summary({ ...report, head: 'a'.repeat(40), base: 'b'.repeat(40) }), /Binary files not assessed/);
+  assert.deepEqual(report.unassessedLockfiles, ['scripts/jev-review/package-lock.json']);
+  const markdown = summary({ ...report, head: 'a'.repeat(40), base: 'b'.repeat(40) });
+  assert.match(markdown, /Binary files not assessed/);
+  assert.match(markdown, /Lockfiles not assessed by Jev:\n\n- `scripts\/jev-review\/package-lock.json`/);
 });
 
 test('SDK sends authenticated typed questions to the fixed API and returns gate failure', async () => {

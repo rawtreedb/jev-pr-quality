@@ -31,6 +31,9 @@ export function formatComment({ report, head, runUrl }) {
   if (report.unassessedBinaryFiles?.length) {
     lines.push(`Binary files not assessed by Jev: ${report.unassessedBinaryFiles.map((file) => `\`${file}\``).join(', ')}`, '');
   }
+  if (report.unassessedLockfiles?.length) {
+    lines.push(`Lockfiles not assessed by Jev: ${report.unassessedLockfiles.map((file) => `\`${file}\``).join(', ')}`, '');
+  }
   if (report.batches.length > 1) {
     lines.push(`Lowest score per dimension across **${report.batches.length} batches**; confidence and notes correspond to that score.`, '');
   }
