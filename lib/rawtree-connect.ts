@@ -57,13 +57,18 @@ export async function rawtreeFetch(session: string, path: string, init: RequestI
     throw error;
   }
 
+  const started = Date.now();
   const response = await fetch(new URL(path, RAWTREE_API_URL), {
     ...init,
     headers: { ...init.headers, Accept: "application/json", Authorization: `Bearer ${token}` },
     cache: "no-store",
   });
+  // One outcome line per RawTree call. Organization, cluster, and database names are logged; tokens, SQL, and bodies are not.
+  const outcome = `RawTree ${init.method ?? "GET"} ${path} -> ${response.status} in ${Date.now() - started} ms`;
+  if (response.ok) console.info(outcome);
+  else console.warn(outcome);
   if (response.status === 401) {
-    console.warn(`RawTree rejected the Connect token for ${path.split("?")[0]} (401); the viewer must reconnect.`);
+    console.warn("RawTree rejected the Connect token; the viewer must reconnect.");
     deleteTokenCacheEntry(CONNECTOR, tokenParams(session));
     throw new NotConnectedError();
   }
@@ -84,7 +89,7 @@ function text(value: unknown): string | undefined {
  * Turns a browser request into a RawTree query: the location from the body, the SQL from the dashboard's own queries.
  * The RawTree OAuth grant is not read-only, so SQL is never accepted from the browser. Throws on invalid input.
  */
-export function buildQueryRequest(body: unknown): { queryId: string; path: string; sql: string } {
+export function buildQueryRequest(body: unknown): { path: string; sql: string } {
   const input = (body ?? {}) as Record<string, unknown>;
   const filters = (input.filters ?? {}) as Record<string, unknown>;
   const organization = text(input.organization);
@@ -94,13 +99,12 @@ export function buildQueryRequest(body: unknown): { queryId: string; path: strin
   if (!organization || !cluster || !database || !table) {
     throw new Error("organization, cluster, database, and table are required.");
   }
-  const queryId = String(input.queryId);
-  const sql = buildDashboardSql(queryId, {
+  const sql = buildDashboardSql(String(input.queryId), {
     repository: text(filters.repository),
     dateFrom: text(filters.dateFrom),
     dateTo: text(filters.dateTo),
   }, table);
-  return { queryId, path: `/v1/query?${new URLSearchParams({ organization, cluster, database })}`, sql };
+  return { path: `/v1/query?${new URLSearchParams({ organization, cluster, database })}`, sql };
 }
 
 /** Lists every organization, cluster, and database the viewer can pick. */

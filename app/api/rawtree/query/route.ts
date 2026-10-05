@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
   const session = readSession(request);
   if (!session) return new Response("Connect RawTree first.", { status: 401 });
 
-  let query: { queryId: string; path: string; sql: string };
+  let query: { path: string; sql: string };
   try {
     query = buildQueryRequest(await request.json().catch(() => null));
   } catch (error) {
@@ -14,16 +14,11 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const started = Date.now();
     const response = await rawtreeFetch(session, query.path, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sql: query.sql }),
     });
-    if (!response.ok) {
-      // Outcome signal for failed upstream queries. The SQL and response body stay out of the logs.
-      console.warn(`RawTree query ${query.queryId} failed (${response.status}) in ${Date.now() - started} ms: ${query.path}`);
-    }
     return new Response(response.body, {
       status: response.status,
       headers: { "Content-Type": response.headers.get("Content-Type") ?? "application/json" },

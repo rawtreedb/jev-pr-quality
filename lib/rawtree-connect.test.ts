@@ -44,9 +44,12 @@ test("only a hash of the browser session is sent to Vercel Connect", () => {
   assert.notEqual(subject.id, tokenParams("other-session").subject.id);
 });
 
-test("calls RawTree with the viewer's Connect token", async () => {
+test("calls RawTree with the viewer's Connect token and logs the outcome without it", async () => {
+  const info = mock.method(console, "info", () => {});
   const calls = stubFetch(() => Response.json({ ok: true }));
   await rawtreeFetch("browser-session", "/v1/organizations");
+  assert.match(String(info.mock.calls[0].arguments[0]), /^RawTree GET \/v1\/organizations -> 200 in \d+ ms$/);
+  info.mock.restore();
   assert.equal(calls[0].url, "https://api.rawtree.com/v1/organizations");
   assert.equal(new Headers(calls[0].init?.headers).get("Authorization"), "Bearer connect-token");
   assert.deepEqual(connect.getToken.mock.calls[0].arguments, ["rawtree/test", tokenParams("browser-session")]);
@@ -68,12 +71,13 @@ test("a token RawTree rejects is logged and dropped from the cache so the next c
   stubFetch(() => new Response("revoked", { status: 401 }));
   await assert.rejects(rawtreeFetch("s", "/v1/query?organization=acme"), NotConnectedError);
   assert.deepEqual(connect.deleteTokenCacheEntry.mock.calls[0].arguments, ["rawtree/test", tokenParams("s")]);
-  assert.match(String(warn.mock.calls[0].arguments[0]), /RawTree rejected the Connect token for \/v1\/query \(401\)/);
+  assert.match(String(warn.mock.calls[0].arguments[0]), /^RawTree GET \/v1\/query\?organization=acme -> 401/);
+  assert.match(String(warn.mock.calls[1].arguments[0]), /rejected the Connect token/);
   warn.mock.restore();
 });
 
 test("builds the RawTree query from a query ID, never from browser SQL", () => {
-  const { queryId, path, sql } = buildQueryRequest({
+  const { path, sql } = buildQueryRequest({
     queryId: "stats",
     organization: "acme",
     cluster: "prod eu",
@@ -82,7 +86,6 @@ test("builds the RawTree query from a query ID, never from browser SQL", () => {
     filters: { repository: "acme/api", dateFrom: "2026-09-01", dateTo: "2026-09-30" },
     sql: "DROP TABLE team_reviews",
   });
-  assert.equal(queryId, "stats");
   assert.equal(path, "/v1/query?organization=acme&cluster=prod+eu&database=jev_prs");
   assert.match(sql, /FROM team_reviews\n/);
   assert.match(sql, /repository::Nullable\(String\) = 'acme\/api'/);
@@ -122,8 +125,7 @@ test("lists organizations, clusters, and databases, tolerating clusters that can
   ]);
   assert.ok(calls.some((call) => call.url.endsWith("/v1/clusters?organization=beta+co")));
   assert.ok(calls.some((call) => call.url.endsWith("/v1/databases?organization=acme&cluster=main")));
-  assert.equal(warn.mock.callCount(), 1);
-  assert.match(String(warn.mock.calls[0].arguments[0]), /Could not list databases for acme\/paused: .*failed \(503\)/);
+  assert.match(String(warn.mock.calls.at(-1)?.arguments[0]), /Could not list databases for acme\/paused: .*failed \(503\)/);
   warn.mock.restore();
 });
 
