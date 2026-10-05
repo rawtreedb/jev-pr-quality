@@ -63,10 +63,13 @@ test("a missing or expired grant becomes NotConnectedError, other Connect failur
   assert.equal(calls.length, 0);
 });
 
-test("a token RawTree rejects is dropped from the cache so the next call re-fetches it", async () => {
+test("a token RawTree rejects is logged and dropped from the cache so the next call re-fetches it", async () => {
+  const warn = mock.method(console, "warn", () => {});
   stubFetch(() => new Response("revoked", { status: 401 }));
-  await assert.rejects(rawtreeFetch("s", "/v1/organizations"), NotConnectedError);
+  await assert.rejects(rawtreeFetch("s", "/v1/query?organization=acme"), NotConnectedError);
   assert.deepEqual(connect.deleteTokenCacheEntry.mock.calls[0].arguments, ["rawtree/test", tokenParams("s")]);
+  assert.match(String(warn.mock.calls[0].arguments[0]), /RawTree rejected the Connect token for \/v1\/query \(401\)/);
+  warn.mock.restore();
 });
 
 test("builds the RawTree query from a query ID, never from browser SQL", () => {
@@ -101,6 +104,7 @@ test("rejects incomplete locations, unknown queries, and unsafe values", () => {
 });
 
 test("lists organizations, clusters, and databases, tolerating clusters that cannot list databases", async () => {
+  const warn = mock.method(console, "warn", () => {});
   const calls = stubFetch((url) => {
     const { pathname, searchParams } = new URL(url);
     if (pathname === "/v1/organizations") return Response.json({ organizations: [{ name: "acme" }, { name: "beta co" }] });
@@ -117,6 +121,9 @@ test("lists organizations, clusters, and databases, tolerating clusters that can
   ]);
   assert.ok(calls.some((call) => call.url.endsWith("/v1/clusters?organization=beta+co")));
   assert.ok(calls.some((call) => call.url.endsWith("/v1/databases?organization=acme&cluster=main")));
+  assert.equal(warn.mock.callCount(), 1);
+  assert.match(String(warn.mock.calls[0].arguments[0]), /Could not list databases for acme\/paused: .*failed \(503\)/);
+  warn.mock.restore();
 });
 
 test("a failed organization or cluster listing is not hidden as an empty workspace", async () => {

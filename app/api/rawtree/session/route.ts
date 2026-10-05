@@ -31,7 +31,10 @@ export async function GET(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const session = readSession(request);
   if (CONNECTOR && session) {
-    await revokeToken(CONNECTOR, tokenParams(session)).catch(() => {});
+    // The cookie is cleared either way; a failed revoke is logged so a lingering grant can be investigated.
+    await revokeToken(CONNECTOR, tokenParams(session)).catch((error) => {
+      console.error(`Could not revoke the RawTree grant: ${error instanceof Error ? error.message : error}`);
+    });
   }
   const response = new NextResponse(null, { status: 204 });
   response.cookies.set(sessionCookie("", 0));

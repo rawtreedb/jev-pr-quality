@@ -63,6 +63,7 @@ export async function rawtreeFetch(session: string, path: string, init: RequestI
     cache: "no-store",
   });
   if (response.status === 401) {
+    console.warn(`RawTree rejected the Connect token for ${path.split("?")[0]} (401); the viewer must reconnect.`);
     deleteTokenCacheEntry(CONNECTOR, tokenParams(session));
     throw new NotConnectedError();
   }
@@ -116,7 +117,10 @@ export async function loadWorkspaces(session: string): Promise<RawtreeWorkspace[
         const databases = await rawtreeJson<{ databases: { name: string }[] }>(
           session,
           `/v1/databases?${new URLSearchParams({ organization, cluster: name })}`,
-        ).then((body) => body.databases.map((database) => database.name), () => []);
+        ).then((body) => body.databases.map((database) => database.name), (error) => {
+          console.warn(`Could not list databases for ${organization}/${name}: ${error instanceof Error ? error.message : error}`);
+          return [];
+        });
         return { name, databases };
       })),
     };

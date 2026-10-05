@@ -51,12 +51,21 @@ export function ConnectForm({
   onConnect: (config: RawtreeConfig) => void;
 }) {
   const [session, setSession] = useState<SessionResponse | null>(null);
+  const [sessionFailed, setSessionFailed] = useState(false);
   const [useApiKey, setUseApiKey] = useState(false);
 
   useEffect(() => {
     fetch("/api/rawtree/session")
-      .then((res) => (res.ok ? res.json() : { enabled: false }))
-      .then(setSession, () => setSession({ enabled: false }));
+      .then((res) => {
+        if (!res.ok) throw new Error(`Session check failed (${res.status})`);
+        return res.json();
+      })
+      .then(setSession, (error) => {
+        // Fall back to API keys, but say so instead of silently hiding the RawTree sign-in.
+        console.error(error);
+        setSessionFailed(true);
+        setSession({ enabled: false });
+      });
   }, []);
 
   async function disconnect() {
@@ -117,6 +126,11 @@ export function ConnectForm({
           </div>
 
           {session === null && <p className="text-body text-muted-foreground">Checking connection…</p>}
+          {sessionFailed && (
+            <p role="status" className="text-body text-muted-foreground">
+              RawTree sign-in is unavailable right now. You can still connect with an API key.
+            </p>
+          )}
 
           {session?.enabled && !useApiKey && !session.connected && (
             <FormFooter>
