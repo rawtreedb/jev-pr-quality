@@ -1,45 +1,24 @@
 import type { NextRequest } from "next/server";
-import { buildDashboardSql } from "@/lib/dashboard-queries";
-import { NotConnectedError, rawtreeFetch, readSession } from "@/lib/rawtree-connect";
+import { buildQueryRequest, NotConnectedError, rawtreeFetch, readSession } from "@/lib/rawtree-connect";
 
-function text(value: unknown): string | undefined {
-  return typeof value === "string" && value ? value : undefined;
-}
-
-/**
- * Runs one of the dashboard's own queries as the signed-in viewer.
- * The RawTree OAuth grant is not read-only, so this route never accepts SQL from the browser.
- */
+/** Runs one of the dashboard's own queries as the signed-in viewer. */
 export async function POST(request: NextRequest) {
   const session = readSession(request);
   if (!session) return new Response("Connect RawTree first.", { status: 401 });
 
-  const body = await request.json().catch(() => null);
-  const organization = text(body?.organization);
-  const cluster = text(body?.cluster);
-  const database = text(body?.database);
-  const table = text(body?.table);
-  if (!organization || !cluster || !database || !table) {
-    return new Response("organization, cluster, database, and table are required.", { status: 400 });
-  }
-
-  let sql: string;
+  let query: { path: string; sql: string };
   try {
-    sql = buildDashboardSql(String(body.queryId), {
-      repository: text(body.filters?.repository),
-      dateFrom: text(body.filters?.dateFrom),
-      dateTo: text(body.filters?.dateTo),
-    }, table);
+    query = buildQueryRequest(await request.json().catch(() => null));
   } catch (error) {
     return new Response(error instanceof Error ? error.message : "Invalid query.", { status: 400 });
   }
 
   try {
-    const response = await rawtreeFetch(
-      session,
-      `/v1/query?${new URLSearchParams({ organization, cluster, database })}`,
-      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sql }) },
-    );
+    const response = await rawtreeFetch(session, query.path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sql: query.sql }),
+    });
     return new Response(response.body, {
       status: response.status,
       headers: { "Content-Type": response.headers.get("Content-Type") ?? "application/json" },

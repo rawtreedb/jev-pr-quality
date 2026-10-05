@@ -1,5 +1,5 @@
-import { buildDashboardSql, type DashboardFilters } from "@/lib/dashboard-queries";
-import { isDemoKey, runDemoQuery } from "@/lib/demo-data";
+import { buildDashboardSql, type DashboardFilters } from "./dashboard-queries.ts";
+import { isDemoKey, runDemoQuery } from "./demo-data.ts";
 
 export interface QueryResult {
   meta: { name: string; type: string }[];

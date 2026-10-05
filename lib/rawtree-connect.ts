@@ -7,7 +7,8 @@ import {
   UserAuthorizationRequiredError,
 } from "@vercel/connect";
 import type { NextRequest } from "next/server";
-import { RAWTREE_API_URL } from "@/lib/rawtree-api";
+import { buildDashboardSql } from "./dashboard-queries.ts";
+import { RAWTREE_API_URL, type RawtreeWorkspace } from "./rawtree-api.ts";
 
 /** Vercel Connect connector for the RawTree API, e.g. `rawtree/jev-pr-quality`. Unset disables Connect. */
 export const CONNECTOR = process.env.RAWTREE_CONNECTOR || null;
@@ -72,4 +73,52 @@ export async function rawtreeJson<T>(session: string, path: string): Promise<T> 
   const response = await rawtreeFetch(session, path);
   if (!response.ok) throw new Error(`RawTree ${path} failed (${response.status})`);
   return response.json();
+}
+
+function text(value: unknown): string | undefined {
+  return typeof value === "string" && value ? value : undefined;
+}
+
+/**
+ * Turns a browser request into a RawTree query: the location from the body, the SQL from the dashboard's own queries.
+ * The RawTree OAuth grant is not read-only, so SQL is never accepted from the browser. Throws on invalid input.
+ */
+export function buildQueryRequest(body: unknown): { path: string; sql: string } {
+  const input = (body ?? {}) as Record<string, unknown>;
+  const filters = (input.filters ?? {}) as Record<string, unknown>;
+  const organization = text(input.organization);
+  const cluster = text(input.cluster);
+  const database = text(input.database);
+  const table = text(input.table);
+  if (!organization || !cluster || !database || !table) {
+    throw new Error("organization, cluster, database, and table are required.");
+  }
+  const sql = buildDashboardSql(String(input.queryId), {
+    repository: text(filters.repository),
+    dateFrom: text(filters.dateFrom),
+    dateTo: text(filters.dateTo),
+  }, table);
+  return { path: `/v1/query?${new URLSearchParams({ organization, cluster, database })}`, sql };
+}
+
+/** Lists every organization, cluster, and database the viewer can pick. */
+export async function loadWorkspaces(session: string): Promise<RawtreeWorkspace[]> {
+  const { organizations } = await rawtreeJson<{ organizations: { name: string }[] }>(session, "/v1/organizations");
+  return Promise.all(organizations.map(async ({ name: organization }) => {
+    const { clusters } = await rawtreeJson<{ clusters: { name: string }[] }>(
+      session,
+      `/v1/clusters?${new URLSearchParams({ organization })}`,
+    );
+    return {
+      organization,
+      clusters: await Promise.all(clusters.map(async ({ name }) => {
+        // A paused or unreachable cluster lists no databases instead of failing the whole picker.
+        const databases = await rawtreeJson<{ databases: { name: string }[] }>(
+          session,
+          `/v1/databases?${new URLSearchParams({ organization, cluster: name })}`,
+        ).then((body) => body.databases.map((database) => database.name), () => []);
+        return { name, databases };
+      })),
+    };
+  }));
 }

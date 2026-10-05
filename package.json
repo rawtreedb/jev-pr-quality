@@ -11,7 +11,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --experimental-strip-types --test lib/*.test.ts"
+    "test": "node --experimental-strip-types --experimental-test-module-mocks --test lib/*.test.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
