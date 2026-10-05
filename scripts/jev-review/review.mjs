@@ -82,16 +82,28 @@ export function evaluateResponse(response, threshold) {
 
 const binaryMarker = /^(GIT binary patch|Binary files .* differ)$/m;
 
-// Jev reviews text. Binary files stay visible as unassessed instead of blocking the text review.
-export function separateBinaryChanges(diff) {
-  const sections = diff.split(/^(?=diff --git )/m).filter(Boolean);
-  const text = sections.filter((section) => !binaryMarker.test(section));
-  const binaryFiles = sections.filter((section) => binaryMarker.test(section))
-    .map((section) => section.slice(0, section.indexOf('\n')).match(/^diff --git a\/.+ b\/(.+)$/)?.[1] ?? 'unknown binary file');
-  if (!text.length && binaryFiles.length) {
-    throw new Error('The PR only changes binary files, which Jev cannot assess. Review them separately.');
+// Generated dependency lockfiles; the manifest change that caused them stays in the reviewed diff.
+const lockfileNames = new Set([
+  'package-lock.json', 'npm-shrinkwrap.json', 'yarn.lock', 'pnpm-lock.yaml', 'bun.lock',
+  'Cargo.lock', 'Gemfile.lock', 'poetry.lock', 'uv.lock', 'Pipfile.lock', 'composer.lock', 'go.sum',
+]);
+
+// Jev reviews hand-written text. Binary files and lockfiles stay visible as unassessed
+// instead of blocking the review or exhausting Jev's input limit.
+export function separateUnassessedChanges(diff) {
+  const text = [];
+  const binaryFiles = [];
+  const lockfiles = [];
+  for (const section of diff.split(/^(?=diff --git )/m).filter(Boolean)) {
+    const path = section.slice(0, section.indexOf('\n')).match(/^diff --git a\/.+ b\/(.+)$/)?.[1];
+    if (binaryMarker.test(section)) binaryFiles.push(path ?? 'unknown binary file');
+    else if (lockfileNames.has(path?.split('/').pop())) lockfiles.push(path);
+    else text.push(section);
   }
-  return { diff: text.join(''), binaryFiles };
+  if (!text.length && (binaryFiles.length || lockfiles.length)) {
+    throw new Error('The PR only changes binary files or lockfiles, which Jev does not assess. Review them separately.');
+  }
+  return { diff: text.join(''), binaryFiles, lockfiles };
 }
 
 // Completeness is a PR-level judgment: keep implementations, callers, and tests together.
@@ -107,10 +119,11 @@ export function validateDiff(diff) {
 
 export async function review({ diff: completeDiff, task, repositoryContext, threshold, apiKey, fetch }) {
   if (!apiKey?.trim()) throw new Error('JEV_API_KEY is missing. Configure the Actions secret. Fork and Dependabot PRs do not receive it.');
-  const { diff, binaryFiles } = separateBinaryChanges(completeDiff);
+  const { diff, binaryFiles, lockfiles } = separateUnassessedChanges(completeDiff);
   validateDiff(diff);
-  const binaryContext = binaryFiles.length
-    ? `\nThese binary files also changed but are not included in the diff and were not assessed:\n${binaryFiles.map((file) => `- ${file}`).join('\n')}`
+  const unassessed = [...binaryFiles, ...lockfiles];
+  const binaryContext = unassessed.length
+    ? `\nThese binary files and lockfiles also changed but are not included in the diff and were not assessed:\n${unassessed.map((file) => `- ${file}`).join('\n')}`
     : '';
   if (Buffer.byteLength(task + repositoryContext) > 24_000) throw new Error('PR description and repository context exceed 24 KB.');
   const client = new TypeSafeClient({
@@ -142,7 +155,7 @@ export async function review({ diff: completeDiff, task, repositoryContext, thre
   }
   const result = evaluateResponse(response, threshold);
   // Retain the report envelope used by the Actions summary and PR comment.
-  return { threshold, model: 'jev-latest', passed: result.passed, unassessedBinaryFiles: binaryFiles, batches: [{ batch: 1, ...result }] };
+  return { threshold, model: 'jev-latest', passed: result.passed, unassessedBinaryFiles: binaryFiles, unassessedLockfiles: lockfiles, batches: [{ batch: 1, ...result }] };
 }
 
 export function summary(report) {
@@ -154,6 +167,9 @@ export function summary(report) {
   ];
   if (report.unassessedBinaryFiles?.length) {
     lines.push('Binary files not assessed by Jev:', '', ...report.unassessedBinaryFiles.map((file) => `- \`${file}\``), '');
+  }
+  if (report.unassessedLockfiles?.length) {
+    lines.push('Lockfiles not assessed by Jev:', '', ...report.unassessedLockfiles.map((file) => `- \`${file}\``), '');
   }
   for (const batch of report.batches) {
     lines.push(`## Batch ${batch.batch}`, '', '| Dimension | Score / 10 | Confidence | Result | Rubric hint |', '| --- | ---: | ---: | --- | --- |');
