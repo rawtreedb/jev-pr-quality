@@ -73,7 +73,7 @@ test("a token RawTree rejects is logged and dropped from the cache so the next c
 });
 
 test("builds the RawTree query from a query ID, never from browser SQL", () => {
-  const { path, sql } = buildQueryRequest({
+  const { queryId, path, sql } = buildQueryRequest({
     queryId: "stats",
     organization: "acme",
     cluster: "prod eu",
@@ -82,6 +82,7 @@ test("builds the RawTree query from a query ID, never from browser SQL", () => {
     filters: { repository: "acme/api", dateFrom: "2026-09-01", dateTo: "2026-09-30" },
     sql: "DROP TABLE team_reviews",
   });
+  assert.equal(queryId, "stats");
   assert.equal(path, "/v1/query?organization=acme&cluster=prod+eu&database=jev_prs");
   assert.match(sql, /FROM team_reviews\n/);
   assert.match(sql, /repository::Nullable\(String\) = 'acme\/api'/);
