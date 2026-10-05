@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   applyDashboardFilters,
+  buildDashboardSql,
   buildStatsQuery,
   dashboardQueries,
 } from "./dashboard-queries.ts";
@@ -39,4 +40,26 @@ test("rejects filter values that could change SQL structure", () => {
     () => applyDashboardFilters(buildStatsQuery(), { dateFrom: "2026-02-30", dateTo: "2026-03-01" }),
     /valid calendar date/,
   );
+});
+
+test("server-built queries accept only the dashboard's own query IDs", () => {
+  for (const id of ["repositories", "date-range", "stats", ...dashboardQueries.map((query) => query.id)]) {
+    assert.match(buildDashboardSql(id, { repository: "example/service-api" }), /^(WITH|SELECT)/, id);
+  }
+  assert.throws(() => buildDashboardSql("DROP TABLE jev_pr_reviews"), /Unknown dashboard query/);
+  assert.throws(
+    () => buildDashboardSql("stats", { repository: "owner/repo' OR 1=1" }),
+    /Invalid repository/,
+  );
+});
+
+test("every query can read a custom events table, and only a plain identifier", () => {
+  for (const id of ["repositories", "date-range", "stats", ...dashboardQueries.map((query) => query.id)]) {
+    const sql = buildDashboardSql(id, {}, "team_reviews");
+    assert.match(sql, /FROM team_reviews\n/, id);
+    assert.doesNotMatch(sql, /jev_pr_reviews/, id);
+  }
+  assert.match(buildDashboardSql("stats"), /FROM jev_pr_reviews\n/);
+  assert.throws(() => buildDashboardSql("stats", {}, "x; DROP TABLE y"), /Invalid table name/);
+  assert.throws(() => buildDashboardSql("stats", {}, "db.table"), /Invalid table name/);
 });

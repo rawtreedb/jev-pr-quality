@@ -1,20 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiKeyForm } from "@/components/dashboard/api-key-form";
+import { ConnectForm } from "@/components/dashboard/connect-form";
 import { ChartPanel } from "@/components/dashboard/chart-panel";
 import { DashboardToolbar } from "@/components/dashboard/dashboard-toolbar";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { useHeaderActions } from "@/components/layout/header-actions";
-import {
-  applyDashboardFilters,
-  buildDateRangeQuery,
-  buildStatsQuery,
-  dashboardConfig,
-  dashboardQueries,
-  repositoryListQuery,
-} from "@/lib/dashboard-queries";
-import { runQuery, type QueryResult, type RawtreeConfig } from "@/lib/rawtree-api";
+import { dashboardConfig, dashboardQueries, withTable } from "@/lib/dashboard-queries";
+import { describeConfig, runQuery, type QueryResult, type RawtreeConfig } from "@/lib/rawtree-api";
 
 type Stats = Record<string, number>;
 
@@ -67,7 +60,7 @@ export function DashboardGrid() {
     setErrors({});
 
     try {
-      const result = await runQuery(cfg.endpoint, cfg.apiKey, applyDashboardFilters(buildStatsQuery(), filters));
+      const result = await runQuery(cfg, "stats", filters);
       const row = result.data[0] ?? {};
       setStats(Object.fromEntries(dashboardConfig.stats.map((stat) => [stat.key, Number(row[stat.key]) || 0])));
     } catch {
@@ -76,7 +69,7 @@ export function DashboardGrid() {
 
     await Promise.all(dashboardQueries.map(async (query) => {
       try {
-        const result = await runQuery(cfg.endpoint, cfg.apiKey, applyDashboardFilters(query.sql, filters));
+        const result = await runQuery(cfg, query.id, filters);
         setResults((current) => ({ ...current, [query.id]: result }));
       } catch (error) {
         setErrors((current) => ({
@@ -93,11 +86,7 @@ export function DashboardGrid() {
     let from = "";
     let to = "";
     try {
-      const range = await runQuery(
-        cfg.endpoint,
-        cfg.apiKey,
-        applyDashboardFilters(buildDateRangeQuery(), { repository: selectedRepository || undefined }),
-      );
+      const range = await runQuery(cfg, "date-range", { repository: selectedRepository || undefined });
       from = dateInput(range.data[0]?.min_date);
       to = dateInput(range.data[0]?.max_date);
       setDateFrom(from);
@@ -124,7 +113,7 @@ export function DashboardGrid() {
   async function handleConnect(cfg: RawtreeConfig) {
     setConfig(cfg);
     try {
-      const result = await runQuery(cfg.endpoint, cfg.apiKey, repositoryListQuery);
+      const result = await runQuery(cfg, "repositories");
       setRepositories(result.data.map((row) => String(row.repository)).filter(Boolean));
     } catch {
       setRepositories([]);
@@ -133,6 +122,7 @@ export function DashboardGrid() {
   }
 
   const disconnect = useCallback(() => {
+    if (config?.kind === "connect") void fetch("/api/rawtree/session", { method: "DELETE" });
     setConfig(null);
     setRepositories([]);
     setRepository("");
@@ -142,7 +132,7 @@ export function DashboardGrid() {
     setResults({});
     setErrors({});
     setAutoRefresh(false);
-  }, []);
+  }, [config]);
 
   const { setOnDisconnect } = useHeaderActions();
   const connected = config !== null;
@@ -152,7 +142,7 @@ export function DashboardGrid() {
     return () => setOnDisconnect(null);
   }, [connected, disconnect, setOnDisconnect]);
 
-  if (!config) return <ApiKeyForm onConnect={handleConnect} />;
+  if (!config) return <ConnectForm onConnect={handleConnect} />;
 
   return (
     <div className="flex-1 bg-canvas">
@@ -166,7 +156,7 @@ export function DashboardGrid() {
         </p>
       </section>
       <DashboardToolbar
-        endpoint={config.endpoint}
+        endpoint={describeConfig(config)}
         repositories={repositories}
         repository={repository}
         dateFrom={dateFrom}
@@ -194,7 +184,7 @@ export function DashboardGrid() {
         {LAYOUT.map((id) => dashboardQueries.find((query) => query.id === id)!).map((query) => (
           <div key={query.id} className={`min-w-0 ${FULL_WIDTH.has(query.id) ? "lg:col-span-2" : ""}`}>
             <ChartPanel
-              query={query}
+              query={{ ...query, sql: withTable(query.sql, config.table) }}
               result={results[query.id] ?? null}
               error={errors[query.id] ?? null}
               loading={loading[query.id] ?? false}

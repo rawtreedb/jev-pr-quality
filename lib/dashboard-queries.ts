@@ -249,3 +249,26 @@ LIMIT 15`,
     chartHeight: 114,
   },
 ];
+
+export type DashboardFilters = { repository?: string; dateFrom?: string; dateTo?: string };
+
+export const DEFAULT_TABLE = dashboardConfig.table;
+const TABLE_NAME = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
+
+/** Points a dashboard query at another events table. The name must be a plain RawTree table identifier. */
+export function withTable(sql: string, table: string): string {
+  if (!TABLE_NAME.test(table)) throw new Error("Invalid table name");
+  return sql.replaceAll(`FROM ${DEFAULT_TABLE}\n`, `FROM ${table}\n`);
+}
+
+/** Builds the SQL for one of the dashboard's own queries. Unknown IDs are rejected. */
+export function buildDashboardSql(id: string, filters: DashboardFilters = {}, table = DEFAULT_TABLE): string {
+  if (id === "repositories") return withTable(repositoryListQuery, table);
+  if (id === "date-range") {
+    return withTable(applyDashboardFilters(buildDateRangeQuery(), { repository: filters.repository }), table);
+  }
+  if (id === "stats") return withTable(applyDashboardFilters(buildStatsQuery(), filters), table);
+  const query = dashboardQueries.find((candidate) => candidate.id === id);
+  if (!query) throw new Error("Unknown dashboard query");
+  return withTable(applyDashboardFilters(query.sql, filters), table);
+}
