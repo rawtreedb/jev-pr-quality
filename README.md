@@ -63,8 +63,9 @@ threshold. The included dashboard keeps only the latest run for each
 
 - **One action:** review, comment, artifact, quality gate, and event logging.
 - **Multi-repository by default:** compare an organization or focus on one repo.
-- **Self-hosted frontend:** deploy with Node.js or Docker; no dashboard backend.
-- **Safe token split:** CI gets a write-only key, viewers use read-only keys.
+- **Sign in with RawTree:** on Vercel, viewers authorize through Vercel Connect instead of pasting keys.
+- **Self-hosted frontend:** deploy with Node.js or Docker; viewers paste a read-only key.
+- **Safe token split:** CI gets a write-only key; viewers use their own RawTree access.
 
 `@main` is the preview channel while the project is under review. Pin the first
 stable `@v1` release when it is published.
@@ -96,14 +97,24 @@ The defaults are the public convention and normally should not be changed:
 | Database | API key's default database |
 
 Override the database, table, or endpoint only to isolate a private installation.
+The dashboard defaults to `jev_pr_reviews` but lets viewers pick another table.
 Never distribute a shared write token in a public workflow or frontend.
 
 ## Public dashboard, private data
 
-The frontend itself is safe to publish. It contains no credentials and has no
-server-side session or proxy. Each viewer supplies their own RawTree read-only
-key, which remains in that browser tab's memory. Data visibility is therefore
-controlled by the RawTree key—not by the deployment being public or private.
+The frontend itself is safe to publish. It contains no credentials, and data
+visibility is controlled by each viewer's own RawTree access, not by the
+deployment being public or private. Viewers connect in one of two ways:
+
+- **Vercel Connect (when `RAWTREE_CONNECTOR` is set).** The viewer clicks
+  **Connect with RawTree**, approves access, then picks the organization,
+  cluster, and database that hold the Jev reviews. Vercel Connect stores and
+  refreshes the RawTree grant per browser session; the browser holds only an
+  opaque, HTTP-only session cookie. **Disconnect** revokes the grant. RawTree
+  OAuth grants are not read-only, so the dashboard's server routes run only the
+  dashboard's fixed queries and never accept SQL from the browser.
+- **API key.** The viewer pastes a RawTree read-only key, which stays in that
+  browser tab's memory and is sent directly to RawTree.
 
 ## Self-host the dashboard
 
@@ -127,9 +138,21 @@ unrelated records are excluded.
 Import this repository as a Next.js project with the repository root as the root
 directory. Set `NEXT_PUBLIC_SITE_URL` to your public URL so shared links use
 your domain in their preview image and canonical metadata. Do not add either API
-key to Vercel:
-the write-only key belongs in GitHub Actions, and viewers enter read-only keys at
-runtime.
+key to Vercel: the write-only key belongs in GitHub Actions.
+
+To let viewers sign in instead of pasting keys, create a Vercel Connect
+connector for the RawTree API from the linked project directory and expose its
+UID as `RAWTREE_CONNECTOR`:
+
+```sh
+vercel link
+vercel connect create rawtree --target api --name jev-pr-quality
+vercel env add RAWTREE_CONNECTOR   # e.g. rawtree/jev-pr-quality
+```
+
+For local development with Connect, run `vercel env pull` so the SDK can use
+the project's OIDC token. Without `RAWTREE_CONNECTOR`, the dashboard falls back
+to API-key mode.
 
 ### Docker
 
@@ -139,7 +162,8 @@ docker run --rm -p 3000:3000 jev-pr-quality
 ```
 
 The image runs as an unprivileged user and contains no credentials. Put TLS in
-front of it before asking users to enter read keys.
+front of it before asking users to enter read keys. Vercel Connect requires a
+Vercel deployment, so Docker installations use API-key mode.
 
 ## What Jev receives
 
